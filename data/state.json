@@ -1,0 +1,22 @@
+{
+  "monitoringSince": "2026-10-28T05:14:14.375Z",
+  "keepaliveMonth": "2026-10",
+  "services": {
+    "site": {
+      "status": "up",
+      "since": "2026-10-28T05:14:14.375Z"
+    },
+    "web": {
+      "status": "up",
+      "since": "2026-10-28T05:14:14.375Z"
+    },
+    "api": {
+      "status": "up",
+      "since": "2026-10-28T05:14:14.375Z"
+    },
+    "extractor": {
+      "status": "up",
+      "since": "2026-10-28T05:14:14.375Z"
+    }
+  }
+}
