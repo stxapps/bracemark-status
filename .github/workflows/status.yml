@@ -1,0 +1,85 @@
+# Check, record, build, deploy — one job, every 15 minutes.
+#
+# The schedule is offset from :00 because that is when GitHub's scheduler is
+# busiest and most likely to start a run late or drop it. Keep the interval in
+# step with INTERVAL_MINUTES in src/config.mjs.
+#
+# GitHub emails a failed scheduled run to whoever last edited this cron line.
+# The last step fails only on the run where a service goes from up to down, so
+# that is one email per outage, not one per check.
+
+name: status
+
+on:
+  schedule:
+    - cron: '7-59/15 * * * *'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write # commit data/ when a service changes state
+  pages: write
+  id-token: write
+
+# One run at a time, and never cancel one halfway through a commit.
+concurrency:
+  group: status
+  cancel-in-progress: false
+
+jobs:
+  status:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      # Tests guard a push. A scheduled run skips them: a failing test there
+      # would stop the checks, and a frozen status page is worse than an
+      # untested one.
+      - if: github.event_name != 'schedule'
+        run: node --test
+
+      - id: check
+        run: node src/check.mjs
+
+      - name: Commit the record
+        if: steps.check.outputs.message != '' && github.ref == 'refs/heads/main'
+        env:
+          MESSAGE: ${{ steps.check.outputs.message }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/
+          git commit -m "$MESSAGE"
+          # A person may have pushed an incident since checkout; data/ is only
+          # ever written here, so rebasing onto it cannot conflict.
+          for attempt in 1 2 3; do
+            if git pull --rebase --quiet origin main && git push --quiet origin HEAD:main; then exit 0; fi
+            sleep 5
+          done
+          exit 1
+
+      - run: node src/build.mjs
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: dist
+
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+      - name: Fail if a service just went down
+        if: steps.check.outputs.went-down == 'true'
+        env:
+          MESSAGE: ${{ steps.check.outputs.message }}
+        run: |
+          echo "::error::$MESSAGE"
+          exit 1

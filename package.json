@@ -1,0 +1,16 @@
+{
+  "name": "bracemark-status",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "description": "status.bracemark.com: checks run on GitHub Actions, page served by GitHub Pages. No dependencies.",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "check": "node src/check.mjs",
+    "build": "node src/build.mjs",
+    "preview": "node src/build.mjs && node src/preview.mjs",
+    "test": "node --test"
+  }
+}
