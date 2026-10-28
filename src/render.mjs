@@ -317,7 +317,7 @@ export function renderIndex(model, services, assets) {
   }
 
   <section class="block" aria-labelledby="services">
-    <h2 id="services" class="eyebrow">Each part, over ${HISTORY_DAYS} days</h2>
+    <h2 id="services" class="eyebrow">Each part</h2>
     <ul class="services">${model.rows.map(renderRow)}</ul>
     <p class="key" aria-hidden="true"><span><span class="bar bar--up"></span>No downtime</span><span><span class="bar bar--minor"></span>Down up to ${MINOR_DAY_MINUTES} minutes</span><span><span class="bar bar--major"></span>Down longer</span><span><span class="bar bar--none"></span>Not monitored yet</span></p>
   </section>
