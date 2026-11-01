@@ -41,10 +41,10 @@ jobs:
         with:
           node-version: 24
 
-      # Tests guard a push. A scheduled run skips them: a failing test there
-      # would stop the checks, and a frozen status page is worse than an
-      # untested one.
-      - if: github.event_name != 'schedule'
+      # Tests guard a push. A run that exists to check the services skips them:
+      # a failing test there would stop the checks, and a frozen status page is
+      # worse than an untested one.
+      - if: github.event_name == 'push'
         run: node --test
 
       - id: check
