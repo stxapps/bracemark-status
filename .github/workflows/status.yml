@@ -1,12 +1,20 @@
 # Check, record, build, deploy — one job, every 15 minutes.
 #
+# Google Cloud Scheduler starts it through workflow_dispatch, because GitHub skips
+# most of the runs this cron line asks for. The cron line stays as the fallback,
+# and as the clock that notices if the dispatches stop.
+#
 # The schedule is offset from :00 because that is when GitHub's scheduler is
 # busiest and most likely to start a run late or drop it. Keep the interval in
-# step with INTERVAL_MINUTES in src/config.mjs.
+# step with INTERVAL_MINUTES in src/config.mjs and with the Scheduler job, which
+# no test can see.
 #
-# GitHub emails a failed scheduled run to whoever last edited this cron line.
-# The last step fails only on the run where a service goes from up to down, so
-# that is one email per outage, not one per check.
+# A failed run is the alert. GitHub emails it to the account that owns the
+# Scheduler job's token if the run was dispatched, and to whoever last edited this
+# cron line if it was scheduled. A run fails on purpose in two cases: when a
+# service goes from up to down, which is one email per outage, not one per check;
+# and when a scheduled run finds the dispatches have stopped, which is one email
+# per scheduled run until they start again.
 
 name: status
 
@@ -18,6 +26,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read # count the dispatched runs
   contents: write # commit data/ when a service changes state
   pages: write
   id-token: write
@@ -83,3 +92,22 @@ jobs:
         run: |
           echo "::error::$MESSAGE"
           exit 1
+
+      # Cron is the one clock Google can't stop, so a scheduled run is what notices
+      # that dispatches have stopped. It's last so it can't hold up a deploy.
+      - name: Fail if dispatches have stopped
+        if: ${{ !cancelled() && github.event_name == 'schedule' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          since=$(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ)
+          if ! count=$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/runs" \
+            -f event=workflow_dispatch -f "created=>=$since" -f per_page=1 \
+            --jq .total_count); then
+            echo "::warning::Couldn't count dispatched runs"
+            exit 0
+          fi
+          if [ "$count" -lt 2 ]; then
+            echo "::error::Only $count dispatched runs in the last hour, expected 4"
+            exit 1
+          fi
