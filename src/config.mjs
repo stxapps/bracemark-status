@@ -58,9 +58,10 @@ export const SITE = {
   repo: 'https://github.com/stxapps/bracemark-status',
 };
 
-// How often the workflow's cron fires. The page states it, and the browser uses
-// it to tell a late check from a normal gap — keep it in step with
-// .github/workflows/status.yml.
+// How often a check runs. The page states it, and the browser uses it to tell a
+// late check from a normal gap — keep it in step with the cron line in
+// .github/workflows/status.yml and with the Cloud Scheduler job that dispatches
+// the workflow, which no test can see (README, _Setup_).
 //
 // 15, not 5 and not 30. Minutes cost nothing either way — a public repo's
 // Actions minutes are free — and a commit happens only on a status change, so
@@ -72,8 +73,9 @@ export const SITE = {
 // day. A test pins this to the cron line.
 export const INTERVAL_MINUTES = 15;
 
-// GitHub starts scheduled runs late under load, often by 10–20 minutes, so
-// "overdue" has to sit well past one interval before the page says so.
+// A run can start late — a dispatch can be missed, and GitHub starts scheduled
+// runs late under load — so "overdue" has to sit well past one interval before
+// the page says so.
 export const STALE_AFTER_MINUTES = 45;
 
 export const HISTORY_DAYS = 90;
